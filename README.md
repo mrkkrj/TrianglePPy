@@ -16,14 +16,12 @@ Use it like this in your Python code:
    from triangle_ppy import Delaunay, DebugOutputLevel, AlgorithmType
 
    points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
-   
+
    d = Delaunay(points)
    d.set_quality_constraints(angle=20.0, area=0.1)
 
-   # triangulate
    d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)
 
-   # get results
    print(f"Triangle count: {d.triangle_count()}")
 
 
