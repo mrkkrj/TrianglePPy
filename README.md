@@ -13,16 +13,16 @@ To use the binding:
 
 Use it like this in your Python code:
 
-   from triangle_ppy import Delaunay, DebugOutputLevel, AlgorithmType
+    from triangle_ppy import Delaunay, DebugOutputLevel, AlgorithmType
 
-   points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
+    points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
 
-   d = Delaunay(points)
-   d.set_quality_constraints(angle=20.0, area=0.1)
+    d = Delaunay(points)
+    d.set_quality_constraints(angle=20.0, area=0.1)
 
-   d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)
+    d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)
 
-   print(f"Triangle count: {d.triangle_count()}")
+    print(f"Triangle count: {d.triangle_count()}")
 
 
 ## Caution
