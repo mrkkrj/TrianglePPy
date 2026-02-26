@@ -1,19 +1,28 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/operators.h>
-#include "Delaunay.h" // Assume this includes the provided C++ class
+
+#include <tpp_interface.hpp> 
 
 namespace py = pybind11;
 using namespace tpp;
 
 // Helper function to convert dpoint<double, 2> to Python list
 py::list point_to_list(const reviver::dpoint<double, 2>& point) {
-    return py::make_tuple(point.x, point.y);
+    return py::make_tuple(point[0], point[1]);
+}
+
+py::list points_to_list(const std::vector<reviver::dpoint<double, 2>>& points) {
+    py::list lst;
+    for(auto& point : points) {
+        lst.append(point_to_list(point));
+    }
+    return lst;
 }
 
 // Helper function to convert dpoint<double, 4> to Python list
 py::list point4_to_list(const reviver::dpoint<double, 4>& point) {
-    return py::make_tuple(point.x, point.y, point.z, point.w);
+    return py::make_tuple(point[0], point[1], point[2], point[3]);
 }
 
 // Helper function to convert Python list/tuple to dpoint<double, 2>
@@ -22,16 +31,25 @@ reviver::dpoint<double, 2> list_to_point(const py::list& lst) {
     return reviver::dpoint<double, 2>(lst[0].cast<double>(), lst[1].cast<double>());
 }
 
+std::vector<reviver::dpoint<double, 2>> list_to_points(const py::list& lst) {
+    std::vector<reviver::dpoint<double, 2>> vec;
+    for(auto& elem: lst) {
+        vec.push_back(list_to_point(elem.cast<py::list>()));
+    }
+    return vec;
+}
+
 // Helper function to convert Python list/tuple to dpoint<double, 4>
 reviver::dpoint<double, 4> list_to_point4(const py::list& lst) {
     if (lst.size() != 4) throw py::value_error("Point4 must have 4 coordinates");
-    return reviver::dpoint<double, 4>(
-        lst[0].cast<double>(), lst[1].cast<double>(),
-        lst[2].cast<double>(), lst[3].cast<double>()
-    );
+    double arr[4] = { lst[0].cast<double>(), lst[1].cast<double>(),
+                      lst[2].cast<double>(), lst[3].cast<double>() };
+    return reviver::dpoint<double, 4>(arr);
 }
 
-PYBIND11_MODULE(delaunay, m) {
+
+PYBIND11_MODULE(triangle_ppy, m) {
+
     // Bind enums
     py::enum_<DebugOutputLevel>(m, "DebugOutputLevel")
         .value("None", DebugOutputLevel::None)
@@ -48,10 +66,15 @@ PYBIND11_MODULE(delaunay, m) {
 
     // Bind the Delaunay class
     py::class_<Delaunay>(m, "Delaunay")
-        // Constructor
+        // Constructor --> not working!!!
         .def(py::init<const std::vector<reviver::dpoint<double, 2>>&, bool>(),
              py::arg("points") = std::vector<reviver::dpoint<double, 2>>(),
              py::arg("enable_mesh_indexing") = false)
+
+        // Custom constructor
+        .def(py::init([](const py::list& lst) { 
+             return std::make_unique<Delaunay>(list_to_points(lst));
+        }))
 
         // Main API
         .def("triangulate", py::overload_cast<bool, DebugOutputLevel>(&Delaunay::Triangulate),
@@ -171,17 +194,17 @@ PYBIND11_MODULE(delaunay, m) {
         });
 
     py::class_<TriangulationMesh>(m, "TriangulationMesh")
-        .def(py::init<>())
+        .def(py::init<Delaunay*>())
         // Add methods as needed
         ;
 
     py::class_<FacesList>(m, "FacesList")
-        .def(py::init<>())
+        .def(py::init<Delaunay*>())
         // Add methods as needed
         ;
 
     py::class_<VertexList>(m, "VertexList")
-        .def(py::init<>())
+        .def(py::init<Delaunay*>())
         // Add methods as needed
         ;
 }

@@ -1,12 +1,14 @@
-from delaunay import Delaunay, DebugOutputLevel, AlgorithmType
+from triangle_ppy import Delaunay, DebugOutputLevel, AlgorithmType
 
 # Create a Delaunay object with points
 points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
-d = Delaunay(points, enable_mesh_indexing=True)
+
+#d = Delaunay(points , enable_mesh_indexing=True) --> OPEN TODO:::
+d = Delaunay(points)
 
 # Set constraints
 d.set_quality_constraints(angle=20.0, area=0.1)
-d.set_segment_constraint([[0.0, 0.0], [1.0, 0.0]])
+#d.set_segment_constraint([[0.0, 0.0], [1.0, 0.0]])  --> OPEN TODO:::
 
 # Perform triangulation
 d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)

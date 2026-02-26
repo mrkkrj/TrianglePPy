@@ -1,16 +1,34 @@
-# TrianglePPy
+# Triangle-PPy
 Python bindings for the Triangle++ library. **WIP !!!!!**
 
-## Compilation Instructions
+## Usage
 
-To compile the binding:
- - Ensure *pybind11* is installed (pip install *pybind11* or include it in your project).
+To use the binding:
+ 
+ - compile the C++ code with CMake
 
- - Compile the C++ code with a command like:
-    c++ -O3 -Wall -shared -std=c++17 -fPIC $(python3 -m pybind11 --includes) delaunay_binding.cpp -o delaunay.so
+ - place the resulting binding .pyd file (Windows) / shared library (Linux) in your Python path.
 
-    Adjust the include paths and library links for your C++ Delaunay implementation.
+ - make sure your compiler's redistributable shared libraries can be found by Python!
 
- - Place the resulting delaunay.so in your Python path.
+Use it like this in your Python code:
+
+   from triangle_ppy import Delaunay, DebugOutputLevel, AlgorithmType
+
+   points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
+   
+   d = Delaunay(points)
+   d.set_quality_constraints(angle=20.0, area=0.1)
+
+   # triangulate
+   d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)
+
+   # get results
+   print(f"Triangle count: {d.triangle_count()}")
 
 
+## Caution
+
+ - first implementation, only basic functionality supported !!!
+
+ - only tested on Windows with Python 3.12 for now !!!
