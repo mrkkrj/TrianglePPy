@@ -1,6 +1,13 @@
+The wrapper code is issued under MIT license as shown below, however the original 
+J.P. Shevchuk's 2005 C-language Triangle package, which we are wrapping, is free, 
+but only for non-commercial usage (see https://www.cs.cmu.edu/~quake/triangle.html). 
+Be forewarned!
+
+---
+
 MIT License
 
-Copyright (c) 2025 Marek Krajewski
+Copyright (c) 2026 Marek Krajewski
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -11,7 +11,7 @@ To use the binding:
 
  - place the resulting binding .pyd file (Windows) / shared library (Linux) in your Python path.
 
- - aslo make sure your compiler's redistributable shared libraries can be found by Python!
+ - also make sure your compiler's redistributable shared libraries can be found by Python!
 
 Use it like this in your Python code:
 
