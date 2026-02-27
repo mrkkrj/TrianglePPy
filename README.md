@@ -1,15 +1,17 @@
 # Triangle-PPy
-Python bindings for the Triangle++ library. **WIP !!!!!**
+<img src="triangle-PPy-sm.jpg" alt="triangle-PP's logo" width="160"/><br/>Python bindings for the Triangle++ library. **WIP !!!!!**
 
 ## Usage
 
 To use the binding:
  
+ - install Python version >= 3.8
+
  - compile the C++ code with CMake
 
  - place the resulting binding .pyd file (Windows) / shared library (Linux) in your Python path.
 
- - make sure your compiler's redistributable shared libraries can be found by Python!
+ - aslo make sure your compiler's redistributable shared libraries can be found by Python!
 
 Use it like this in your Python code:
 
@@ -24,9 +26,12 @@ Use it like this in your Python code:
 
     print(f"Triangle count: {d.triangle_count()}")
 
+For more usage cases have a look into the *usage_example.py* file.
 
 ## Caution
 
  - first implementation, only basic functionality supported !!!
 
  - only tested on Windows with Python 3.12 for now !!!
+
+ - WIP !!!

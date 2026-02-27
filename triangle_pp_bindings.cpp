@@ -12,6 +12,7 @@ py::list point_to_list(const reviver::dpoint<double, 2>& point) {
     return py::make_tuple(point[0], point[1]);
 }
 
+// Helper function to convert vector<dpoint<double, 2>> to Python list
 py::list points_to_list(const std::vector<reviver::dpoint<double, 2>>& points) {
     py::list lst;
     for(auto& point : points) {
@@ -31,6 +32,7 @@ reviver::dpoint<double, 2> list_to_point(const py::list& lst) {
     return reviver::dpoint<double, 2>(lst[0].cast<double>(), lst[1].cast<double>());
 }
 
+// Helper function to convert Python list/tuple to vector<dpoint<double, 2>>
 std::vector<reviver::dpoint<double, 2>> list_to_points(const py::list& lst) {
     std::vector<reviver::dpoint<double, 2>> vec;
     for(auto& elem: lst) {
@@ -66,15 +68,12 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
     // Bind the Delaunay class
     py::class_<Delaunay>(m, "Delaunay")
-        // Constructor --> not working!!!
-        .def(py::init<const std::vector<reviver::dpoint<double, 2>>&, bool>(),
-             py::arg("points") = std::vector<reviver::dpoint<double, 2>>(),
-             py::arg("enable_mesh_indexing") = false)
-
-        // Custom constructor
-        .def(py::init([](const py::list& lst) { 
-             return std::make_unique<Delaunay>(list_to_points(lst));
-        }))
+        // Constructor
+        .def(py::init([](const py::list& lst, bool enableMeshIdx) { 
+             return std::make_unique<Delaunay>(list_to_points(lst), enableMeshIdx);
+            }),
+            py::arg("points") = py::list(),
+            py::arg("enable_mesh_indexing") = false)        
 
         // Main API
         .def("triangulate", py::overload_cast<bool, DebugOutputLevel>(&Delaunay::Triangulate),
@@ -96,12 +95,21 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("set_min_angle", &Delaunay::setMinAngle, py::arg("angle"))
         .def("set_max_area", &Delaunay::setMaxArea, py::arg("area"))
         .def("remove_quality_constraints", &Delaunay::removeQualityConstraints)
+
+        // .def("set_segment_constraint",
+        //      py::overload_cast<const std::vector<reviver::dpoint<double, 2>>&>(&Delaunay::setSegmentConstraint),
+        //      py::arg("segments"))
+        
         .def("set_segment_constraint",
-             py::overload_cast<const std::vector<reviver::dpoint<double, 2>>&>(&Delaunay::setSegmentConstraint),
-             py::arg("segments"))
+             [](Delaunay& d, const py::list& segments) { 
+                d.setSegmentConstraint(list_to_points(segments));
+             },
+            py::arg("segments"))
+
         .def("set_segment_constraint",
              py::overload_cast<const std::vector<int>&, DebugOutputLevel>(&Delaunay::setSegmentConstraint),
              py::arg("segment_point_indexes"), py::arg("trace_level") = DebugOutputLevel::None)
+
         .def("use_convex_hull_with_segments", &Delaunay::useConvexHullWithSegments, py::arg("use_convex_hull"))
         .def("set_holes_constraint", &Delaunay::setHolesConstraint, py::arg("holes"))
         .def("set_regions_constraint",
@@ -137,8 +145,25 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("save_points", &Delaunay::savePoints, py::arg("file_path"))
         .def("save_segments", &Delaunay::saveSegments, py::arg("file_path"))
         .def("write_off", &Delaunay::writeoff, py::arg("fname"))
-        .def("read_points", &Delaunay::readPoints,
+
+
+        // .def("read_points", &Delaunay::readPoints,
+        //      py::arg("file_path"), py::arg("points"))
+
+        .def("read_points",
+             [](Delaunay& d, const std::string& filePath, py::list& points) { 
+                std::vector<reviver::dpoint<double, 2>> vec;
+                d.readPoints(filePath, vec);
+                points = points_to_list(vec);
+
+                // dbg:
+                //if(d.debugLevel() == DebugOutputLevel::Debug) --> TODO:::
+                printf(" ----> vec.size=%d\n", vec.size());
+                printf(" ----> points.size=%d\n", points.size());
+
+             },
              py::arg("file_path"), py::arg("points"))
+
         .def("read_segments", &Delaunay::readSegments,
              py::arg("file_path"), py::arg("points"), py::arg("segment_endpoints"),
              py::arg("hole_markers"), py::arg("region_constr"),
