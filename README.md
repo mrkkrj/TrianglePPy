@@ -3,24 +3,24 @@
 
 ## Usage
 
-To use the binding:
+To use the bindings:
  
  - install Python version >= 3.8
 
  - compile the C++ code with CMake
 
- - place the resulting binding .pyd file (Windows) / shared library (Linux) in your Python path.
+ - place the resulting bindings .pyd file (Windows) / shared library (Linux) in your Python path.
 
  - also make sure your compiler's redistributable shared libraries can be found by Python!
 
 Use it like this in your Python code:
 
-    from triangle_ppy import Delaunay, DebugOutputLevel, AlgorithmType
+    from triangle_ppy import Delaunay, DebugOutputLevel
 
     points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0]]
 
     d = Delaunay(points)
-    d.set_quality_constraints(angle=20.0, area=0.1)
+    d.set_quality_constraints(min_angle=20.0, max_area=0.1)
 
     d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)
 

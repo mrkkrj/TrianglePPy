@@ -91,7 +91,7 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
         // Constraints API
         .def("set_quality_constraints", &Delaunay::setQualityConstraints,
-             py::arg("angle"), py::arg("area"))
+             py::arg("min_angle"), py::arg("max_area"))
         .def("set_min_angle", &Delaunay::setMinAngle, py::arg("angle"))
         .def("set_max_area", &Delaunay::setMaxArea, py::arg("area"))
         .def("remove_quality_constraints", &Delaunay::removeQualityConstraints)
@@ -146,21 +146,17 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("save_segments", &Delaunay::saveSegments, py::arg("file_path"))
         .def("write_off", &Delaunay::writeoff, py::arg("fname"))
 
-
-        // .def("read_points", &Delaunay::readPoints,
-        //      py::arg("file_path"), py::arg("points"))
-
         .def("read_points",
-             [](Delaunay& d, const std::string& filePath, py::list& points) { 
+             [](Delaunay& d, const std::string& filePath, py::list& points) -> bool { 
                 std::vector<reviver::dpoint<double, 2>> vec;
-                d.readPoints(filePath, vec);
-                points = points_to_list(vec);
-
-                // dbg:
-                //if(d.debugLevel() == DebugOutputLevel::Debug) --> TODO:::
-                printf(" ----> vec.size=%d\n", vec.size());
-                printf(" ----> points.size=%d\n", points.size());
-
+                if(d.readPoints(filePath, vec)) {
+                    //points = points_to_list(vec); --> not working !!!                    
+                    auto tmp = points_to_list(vec);
+                    for(auto& point: tmp)
+                        points.append(point);                    
+                    return true;
+                }
+                return false;
              },
              py::arg("file_path"), py::arg("points"))
 
@@ -223,11 +219,39 @@ PYBIND11_MODULE(triangle_ppy, m) {
         // Add methods as needed
         ;
 
+        
     py::class_<FacesList>(m, "FacesList")
         .def(py::init<Delaunay*>())
-        // Add methods as needed
+        .def("__iter__", [](FacesList &self) {
+            return py::make_iterator(self.begin(), self.end());
+        }, py::keep_alive<0, 1>())
         ;
 
+    py::class_<FaceIterator::Face>(m, "Face")
+        .def(py::init<FaceIterator*>())        
+        .def("org",
+             [](FaceIterator::Face& f) -> py::tuple{ 
+                Delaunay::Point point;
+                int idx = f.Org(&point);
+                return py::make_tuple(point_to_list(point), idx);
+             })
+        .def("dest",
+             [](FaceIterator::Face& f) -> py::tuple{ 
+                Delaunay::Point point;
+                int idx = f.Dest(&point);
+                return py::make_tuple(point_to_list(point), idx);
+             })
+        .def("apex",
+             [](FaceIterator::Face& f) -> py::tuple{ 
+                Delaunay::Point point;
+                int idx = f.Apex(&point);
+                return py::make_tuple(point_to_list(point), idx);
+             })
+        .def("area", 
+            py::overload_cast<>(&FaceIterator::Face::area, py::const_))
+        ;
+
+        
     py::class_<VertexList>(m, "VertexList")
         .def(py::init<Delaunay*>())
         // Add methods as needed
