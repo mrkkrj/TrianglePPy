@@ -9,7 +9,10 @@ using namespace tpp;
 
 // Helper function to convert dpoint<double, 2> to Python list
 py::list point_to_list(const reviver::dpoint<double, 2>& point) {
-    return py::make_tuple(point[0], point[1]);
+    py::list lst;
+    lst.append(point[0]);
+    lst.append(point[1]);
+    return lst;
 }
 
 // Helper function to convert vector<dpoint<double, 2>> to Python list
@@ -49,12 +52,63 @@ reviver::dpoint<double, 4> list_to_point4(const py::list& lst) {
     return reviver::dpoint<double, 4>(arr);
 }
 
+// Helper class for Voronoi vertex iteration
+struct TRPP_LIB_EXPORT VoronoiVertexList
+{
+    VoronoiVertexList(Delaunay* triangulator) : m_delaunay(triangulator) {}
+
+    struct VertexListIterator : public VoronoiVertexIterator
+    {
+        VertexListIterator(VoronoiVertexIterator vit) : VoronoiVertexIterator(vit) {}
+
+        VertexListIterator operator++() {
+        return VoronoiVertexIterator::operator++();
+        }
+
+        const VoronoiVertexIterator& operator*() const {
+        return *this;
+        }         
+    };
+
+    VertexListIterator begin() { return m_delaunay->vvbegin(); }
+    VertexListIterator end() { return m_delaunay->vvend(); }
+
+private:
+    Delaunay* m_delaunay;
+};
+
+// Helper class for Voronoi edge iteration
+struct TRPP_LIB_EXPORT VoronoiEdgeList
+{
+    VoronoiEdgeList(Delaunay* triangulator) : m_delaunay(triangulator) {}
+
+    struct VertexListIterator : public VoronoiEdgeIterator
+    {
+        VertexListIterator(VoronoiEdgeIterator vit) : VoronoiEdgeIterator(vit) {}
+
+        VertexListIterator operator++() {
+            return VoronoiEdgeIterator::operator++();
+        }
+
+        const VoronoiEdgeIterator& operator*() const {
+            return *this;
+        }         
+    };
+
+    VertexListIterator begin() { return m_delaunay->vebegin(); }
+    VertexListIterator end() { return m_delaunay->veend(); }
+
+private:
+    Delaunay* m_delaunay;
+};
+
+
 
 PYBIND11_MODULE(triangle_ppy, m) {
 
     // Bind enums
     py::enum_<DebugOutputLevel>(m, "DebugOutputLevel")
-        .value("None", DebugOutputLevel::None)
+        .value("Nothing", DebugOutputLevel::None)
         .value("Info", DebugOutputLevel::Info)
         .value("Vertex", DebugOutputLevel::Vertex)
         .value("Debug", DebugOutputLevel::Debug)
@@ -95,10 +149,6 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("set_min_angle", &Delaunay::setMinAngle, py::arg("angle"))
         .def("set_max_area", &Delaunay::setMaxArea, py::arg("area"))
         .def("remove_quality_constraints", &Delaunay::removeQualityConstraints)
-
-        // .def("set_segment_constraint",
-        //      py::overload_cast<const std::vector<reviver::dpoint<double, 2>>&>(&Delaunay::setSegmentConstraint),
-        //      py::arg("segments"))
         
         .def("set_segment_constraint",
              [](Delaunay& d, const py::list& segments) { 
@@ -111,7 +161,9 @@ PYBIND11_MODULE(triangle_ppy, m) {
              py::arg("segment_point_indexes"), py::arg("trace_level") = DebugOutputLevel::None)
 
         .def("use_convex_hull_with_segments", &Delaunay::useConvexHullWithSegments, py::arg("use_convex_hull"))
+        
         .def("set_holes_constraint", &Delaunay::setHolesConstraint, py::arg("holes"))
+
         .def("set_regions_constraint",
              py::overload_cast<const std::vector<reviver::dpoint<double, 2>>&, const std::vector<float>&>(
                  &Delaunay::setRegionsConstraint),
@@ -119,6 +171,7 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("set_regions_constraint",
              py::overload_cast<const std::vector<reviver::dpoint<double, 4>>&>(&Delaunay::setRegionsConstraint),
              py::arg("region_constr"))
+
         .def("check_constraints", &Delaunay::checkConstraints, py::arg("possible"))
         .def("check_constraints_opt", &Delaunay::checkConstraintsOpt, py::arg("relaxed"))
         .def_static("get_min_angle_boundaries", &Delaunay::getMinAngleBoundaries,
@@ -133,11 +186,27 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("hole_count", &Delaunay::holeCount)
         .def("get_min_max_points", &Delaunay::getMinMaxPoints,
              py::arg("min_x"), py::arg("min_y"), py::arg("max_x"), py::arg("max_y"))
+
         .def("faces", &Delaunay::faces) // Assumes FacesList has its own binding
         .def("vertices", &Delaunay::vertices) // Assumes VertexList has its own binding
+        
         .def("voronoi_point_count", &Delaunay::voronoiPointCount)
         .def("voronoi_edge_count", &Delaunay::voronoiEdgeCount)
+        
+        .def("voronoi_vertices",
+                [](Delaunay& d) { 
+                    // OPEN TODO::: copy ????
+                    return VoronoiVertexList(&d);
+             })
+
+        .def("voronoi_edges",
+                [](Delaunay& d) { 
+                    // OPEN TODO::: copy ????
+                    return VoronoiEdgeList(&d);
+             })
+
         .def("mesh", &Delaunay::mesh) // Assumes TriangulationMesh has its own binding
+        
         .def("point_at_vertex_id", &Delaunay::pointAtVertexId,
              py::return_value_policy::reference)
 
@@ -165,6 +234,7 @@ PYBIND11_MODULE(triangle_ppy, m) {
              py::arg("hole_markers"), py::arg("region_constr"),
              py::arg("duplicate_point_count") = nullptr,
              py::arg("trace_level") = DebugOutputLevel::None)
+             
         .def("enable_file_io_trace", &Delaunay::enableFileIOTrace, py::arg("enable"))
 
         // Iterator methods (simplified, assuming iterator bindings)
@@ -193,33 +263,10 @@ PYBIND11_MODULE(triangle_ppy, m) {
             throw py::stop_iteration();
         });
 
-    py::class_<VertexIterator>(m, "VertexIterator")
-        .def(py::init<>())
-        .def("__iter__", [](VertexIterator &it) -> VertexIterator& { return it; })
-        .def("__next__", [](VertexIterator &it) {
-            throw py::stop_iteration();
-        });
 
-    py::class_<VoronoiVertexIterator>(m, "VoronoiVertexIterator")
-        .def(py::init<>())
-        .def("__iter__", [](VoronoiVertexIterator &it) -> VoronoiVertexIterator& { return it; })
-        .def("__next__", [](VoronoiVertexIterator &it) {
-            throw py::stop_iteration();
-        });
 
-    py::class_<VoronoiEdgeIterator>(m, "VoronoiEdgeIterator")
-        .def(py::init<>())
-        .def("__iter__", [](VoronoiEdgeIterator &it) -> VoronoiEdgeIterator& { return it; })
-        .def("__next__", [](VoronoiEdgeIterator &it) {
-            throw py::stop_iteration();
-        });
 
-    py::class_<TriangulationMesh>(m, "TriangulationMesh")
-        .def(py::init<Delaunay*>())
-        // Add methods as needed
-        ;
-
-        
+    // Iterate over faces
     py::class_<FacesList>(m, "FacesList")
         .def(py::init<Delaunay*>())
         .def("__iter__", [](FacesList &self) {
@@ -235,25 +282,153 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 int idx = f.Org(&point);
                 return py::make_tuple(point_to_list(point), idx);
              })
+        .def("org_idx",
+             [](FaceIterator::Face& f) -> int { 
+                int idx = f.Org();
+                return idx;
+             })   
+        .def("org_mesh_idx",
+             [](FaceIterator::Face& f) -> int{ 
+                Delaunay::Point point;
+                int meshIdx;
+                f.Org(point, meshIdx);
+                return meshIdx;
+             })                     
         .def("dest",
              [](FaceIterator::Face& f) -> py::tuple{ 
                 Delaunay::Point point;
                 int idx = f.Dest(&point);
                 return py::make_tuple(point_to_list(point), idx);
+             })             
+        .def("dest_idx",
+             [](FaceIterator::Face& f) -> int { 
+                int idx = f.Dest();
+                return idx;
              })
+        .def("dest_mesh_idx",
+             [](FaceIterator::Face& f) -> int{ 
+                Delaunay::Point point;
+                int meshIdx;
+                f.Dest(point, meshIdx);
+                return meshIdx;
+             })                
         .def("apex",
              [](FaceIterator::Face& f) -> py::tuple{ 
                 Delaunay::Point point;
                 int idx = f.Apex(&point);
                 return py::make_tuple(point_to_list(point), idx);
              })
-        .def("area", 
+        .def("apex_idx",
+             [](FaceIterator::Face& f) -> int { 
+                int idx = f.Apex();
+                return idx;
+             })
+        .def("apex_mesh_idx",
+             [](FaceIterator::Face& f) -> int{ 
+                Delaunay::Point point;
+                int meshIdx;
+                f.Apex(point, meshIdx);
+                return meshIdx;
+             })                
+        .def("area",
             py::overload_cast<>(&FaceIterator::Face::area, py::const_))
+
+        .def("is_ghost",
+             [](FaceIterator::Face& f) -> bool {
+                // OPEN TODO::: !!!
+                //return f.m_iter->isGhost();
+                return false; 
+             })            
         ;
 
-        
+    // Iterate over vertices        
     py::class_<VertexList>(m, "VertexList")
         .def(py::init<Delaunay*>())
-        // Add methods as needed
+        .def("__iter__", [](VertexList &self) {
+            return py::make_iterator(self.begin(), self.end());
+        }, py::keep_alive<0, 1>())        
         ;
+
+    py::class_<VertexIterator>(m, "VertexIterator")
+        .def(py::init<>())
+        .def("point",
+             [](VertexIterator& v) -> py::list{ 
+                return point_to_list(*v);
+             })
+        .def("x", &VertexIterator::x)
+             //py::overload_cast<>(&VertexIterator::x, py::const_))
+            //  [](VertexIterator& v) -> double { 
+            //     return v.x();
+            //  })
+        .def("y", &VertexIterator::y)
+            //  [](VertexIterator& v) -> double { 
+            //     return v.y();
+            //  })
+        .def("vertex_id", &VertexIterator::vertexId)
+            //  [](VertexIterator& v) -> int { 
+            //     return v.vertexId();
+            //  })
+        ;
+
+
+    // Iterate over Voronoi vertices        
+    py::class_<VoronoiVertexList>(m, "VoronoiVertexList")
+        .def(py::init<Delaunay*>())
+        .def("__iter__", [](VoronoiVertexList &self) {
+            return py::make_iterator(self.begin(), self.end());
+        }, py::keep_alive<0, 1>())        
+        ;
+
+    py::class_<VoronoiVertexIterator>(m, "VoronoiVertexIterator")
+        .def(py::init<>())  
+
+        .def("point",
+             [](VoronoiVertexIterator& v) -> py::list{ 
+                return point_to_list(*v);
+             })
+        ;
+
+
+    // Iterate over Voronoi edges
+    py::class_<VoronoiEdgeList>(m, "VoronoiEdgeList")
+        .def(py::init<Delaunay*>())
+        .def("__iter__", [](VoronoiEdgeList &self) {
+            return py::make_iterator(self.begin(), self.end());
+        }, py::keep_alive<0, 1>())        
+        ;
+
+    py::class_<VoronoiEdgeIterator>(m, "VoronoiEdgeIterator")
+        .def(py::init<>())
+
+        .def("start_point_id",
+             [](VoronoiEdgeIterator& v) -> int { 
+                return v.startPointId();
+             })
+        .def("end_point_id",
+             [](VoronoiEdgeIterator& v) -> py::tuple { 
+                Delaunay::Point normvec;
+                int idx = v.endPointId(normvec);
+                return py::make_tuple(idx, point_to_list(normvec));
+             })
+
+        .def("org",
+             [](VoronoiEdgeIterator& v) -> py::list { 
+                return point_to_list(v.Org());
+             })
+        .def("dest",
+             [](VoronoiEdgeIterator& v) -> py::tuple { 
+                bool finiteEdge;
+                py::list pt = point_to_list(v.Dest(finiteEdge));
+                return py::make_tuple(pt, finiteEdge);
+             })
+        ;
+
+
+
+
+    py::class_<TriangulationMesh>(m, "TriangulationMesh")
+        .def(py::init<Delaunay*>())
+        // Add methods as needed
+        ;        
+
 }
