@@ -1,11 +1,12 @@
 from triangle_ppy import Delaunay, DebugOutputLevel
 
-output_level = DebugOutputLevel.Info
+output_level = DebugOutputLevel.Info  #.Nothing #.Debug #.Info 
 
 # Create a Delaunay object with points
 points = [[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]]
 
 d = Delaunay(points, enable_mesh_indexing=True)
+
 
 # Set constraints
 d.set_quality_constraints(min_angle=20.0, max_area=0.1)
@@ -18,11 +19,18 @@ d.set_segment_constraint([[0.0, 0.1], [1.0, 1.0]])
 d.triangulate(quality=True, trace_level=output_level)
 
 # Get results
-print(f"Triangle count: {d.triangle_count()}")
+triangle_count = d.triangle_count()
+edge_count = d.edge_count()
+vertice_count = d.vertice_count()
+
 if output_level != DebugOutputLevel.Nothing:
-    print(f"Edge count: {d.edge_count()}")
-    print(f"Vertice count: {d.vertice_count()}")
+    print(f"Triangle count: {triangle_count}")
+    print(f"Edge count: {edge_count}")
+    print(f"Vertice count: {vertice_count}")
     # etc ...
+
+print(f" >> Triangulation OK ... \n")    
+
 
 # Iterate over triangles
 faces = d.faces()
@@ -68,38 +76,58 @@ for v in vertices:
     if output_level != DebugOutputLevel.Nothing:
         print(f"vertexID: {v_id} - at {pt}") 
 
+print(f" >> Iteration OK ... \n")
+
 
 # Save to file
 d.save_points("./triangulation_result.node")
 
 # Read from file
 points = []
-if(d.read_points("./triangulation_result.node", points)):
-    print(f"Points from file count: {len(points)}")
+if(d.read_points("./triangulation_result.node", points)):    
     if output_level != DebugOutputLevel.Nothing:
+        print(f"Points from file count: {len(points)}")
         print(f"Points from file: {points}") 
 else:
     print(f"Cannot read points from file: {points}") 
+
+print(f" >> File I/O OK ... \n")
 
 
 # Perform tesselation
 d.tesselate(use_conforming_delaunay=False, trace_level=output_level)
 
 # Get results
-print(f"Voronoi point count: {d.voronoi_point_count()}")
-print(f"Voronoi edge count: {d.voronoi_edge_count()}")
+point_count = d.voronoi_point_count()
+edge_count = d.voronoi_edge_count()
 
+if output_level != DebugOutputLevel.Nothing:
+    print(f"Voronoi point count: {point_count}")
+    print(f"Voronoi edge count: {edge_count}")
+
+print(f" >> Tesselation OK ... \n")
+
+
+# Iterate over the diagram
 vertices = d.voronoi_vertices()
 for v in vertices:
     pt = v.point()
-    print(f"Voronoi point: {pt}") 
+
+    if output_level != DebugOutputLevel.Nothing:
+        print(f"Voronoi point: {pt}") 
 
 edges = d.voronoi_edges()
 for e in edges:
     orig = e.org()
-    dest, finite_edge = e.dest()
+    dest, is_finite_edge = e.dest()
 
-    print(f"Voronoi edge: {orig} -> {dest if finite_edge else ['inf', 'inf']}") 
+    if output_level != DebugOutputLevel.Nothing:
+        print(f"Voronoi edge: {orig} -> {dest if is_finite_edge else ['inf', 'inf']}") 
+
+print(f" >> Voronoi Iteration OK ... \n")
 
 
-# ---
+# --- more ????
+
+
+print(f"Finished ---> \n")
