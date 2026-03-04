@@ -105,6 +105,21 @@ private:
 };
 
 
+// Helper for iterators - move to Triangle++ !!!!
+//  --> not working! 
+//  OPEN TODO::: modernize ietartors in Triangle++!
+namespace std {
+template<>
+struct iterator_traits<FaceIterator> {
+    using difference_type   = std::ptrdiff_t;
+    using value_type        = FaceIterator::Face;
+    using pointer           = FaceIterator::Face*;
+    using reference         = FaceIterator::Face&;
+    using iterator_category = std::random_access_iterator_tag;
+};
+}
+
+
 PYBIND11_MODULE(triangle_ppy, m) {
 
     // Bind enums
@@ -120,7 +135,6 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .value("Incremental", AlgorithmType::Incremental)
         .value("Sweepline", AlgorithmType::Sweepline)
         .export_values();
-
 
     // Bind the Delaunay class
     py::class_<Delaunay>(m, "Delaunay")
@@ -147,7 +161,7 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
         // Constraints API
         .def("set_quality_constraints", &Delaunay::setQualityConstraints,
-             py::arg("min_angle"), py::arg("max_area"))
+             py::arg("min_angle"), py::arg("max_area"))             
         .def("set_min_angle", &Delaunay::setMinAngle, py::arg("angle"))
         .def("set_max_area", &Delaunay::setMaxArea, py::arg("area"))
         .def("remove_quality_constraints", &Delaunay::removeQualityConstraints)
@@ -157,29 +171,45 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 d.setSegmentConstraint(list_to_points(segments));
              },
             py::arg("segments"))
-
         .def("set_segment_constraint",
              py::overload_cast<const std::vector<int>&, DebugOutputLevel>(&Delaunay::setSegmentConstraint),
              py::arg("segment_point_indexes"), py::arg("trace_level") = DebugOutputLevel::None)
 
         .def("use_convex_hull_with_segments", &Delaunay::useConvexHullWithSegments, py::arg("use_convex_hull"))
-        
-        // OPEN TODO::: ----
-        .def("set_holes_constraint", &Delaunay::setHolesConstraint, py::arg("holes"))
 
-        // OPEN TODO::: ----
+        .def("set_holes_constraint", 
+             [](Delaunay& d, const py::list& holes) { 
+                d.setHolesConstraint(list_to_points(holes));
+             },            
+            py::arg("holes"))
+
         .def("set_regions_constraint",
-             py::overload_cast<const std::vector<reviver::dpoint<double, 2>>&, const std::vector<float>&>(
-                 &Delaunay::setRegionsConstraint),
+             [](Delaunay& d, const py::list& regions, const py::list& areas) { 
+                std::vector<float> fvec;
+                for(auto& a: areas) {
+                    fvec.push_back(a.cast<float>());
+                }
+                d.setRegionsConstraint(list_to_points(regions), fvec);
+             },            
              py::arg("regions"), py::arg("areas"))
-        .def("set_regions_constraint",
-             py::overload_cast<const std::vector<reviver::dpoint<double, 4>>&>(&Delaunay::setRegionsConstraint),
-             py::arg("region_constr"))
 
-        .def("check_constraints", &Delaunay::checkConstraints, py::arg("possible"))
-        .def("check_constraints_opt", &Delaunay::checkConstraintsOpt, py::arg("relaxed"))
-        .def_static("get_min_angle_boundaries", &Delaunay::getMinAngleBoundaries,
-                    py::arg("guaranteed"), py::arg("possible"))
+        .def("check_constraints", 
+               [](Delaunay& d) { 
+                bool possible;
+                return d.checkConstraints(possible);
+             })
+        .def("check_constraints_relaxed", 
+               [](Delaunay& d) { 
+                bool relaxed = true;
+                return d.checkConstraintsOpt(relaxed);
+             })
+        .def("get_min_angle_boundaries",
+               [](Delaunay& d) -> py::tuple { 
+                float guaranteed;
+                float possible;
+                d.getMinAngleBoundaries(guaranteed, possible);
+                return py::make_tuple(guaranteed, possible);
+             })                    
 
         // Results API
         .def("has_triangulation", &Delaunay::hasTriangulation)
@@ -188,9 +218,16 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("vertice_count", &Delaunay::verticeCount)
         .def("hull_size", &Delaunay::hullSize)
         .def("hole_count", &Delaunay::holeCount)
-        .def("get_min_max_points", &Delaunay::getMinMaxPoints,
-             py::arg("min_x"), py::arg("min_y"), py::arg("max_x"), py::arg("max_y"))
 
+        .def("get_min_max_points", 
+               [](Delaunay& d) -> py::list { 
+                double minX, minY, maxX, maxY;
+                d.getMinMaxPoints(minX, minY, maxX, maxY);
+                auto minPt = point_to_list(Delaunay::Point(minX, minY));
+                auto maxPt = point_to_list(Delaunay::Point(maxX, maxY));
+                return py::make_tuple(minPt, maxPt);
+             })
+             
         .def("faces", &Delaunay::faces) // Assumes FacesList has its own binding
         .def("vertices", &Delaunay::vertices) // Assumes VertexList has its own binding
         
@@ -199,21 +236,24 @@ PYBIND11_MODULE(triangle_ppy, m) {
         
         .def("voronoi_vertices",
                 [](Delaunay& d) { 
-                    // OPEN TODO::: copy ????  ----
                     return VoronoiVertexList(&d);
              })
         .def("voronoi_edges",
                 [](Delaunay& d) { 
-                    // OPEN TODO::: copy ????  ----
                     return VoronoiEdgeList(&d);
              })
 
+
         // OPEN TODO::: ----
+
         .def("mesh", &Delaunay::mesh) // Assumes TriangulationMesh has its own binding
         
+        
         // OPEN TODO::: ----
+        
         .def("point_at_vertex_id", &Delaunay::pointAtVertexId,
              py::return_value_policy::reference)
+
 
         // File I/O API
         .def("save_points", &Delaunay::savePoints, py::arg("file_path"))
@@ -234,7 +274,9 @@ PYBIND11_MODULE(triangle_ppy, m) {
              },
              py::arg("file_path"), py::arg("points"))
 
+
         // OPEN TODO::: ----
+
         .def("read_segments", &Delaunay::readSegments,
              py::arg("file_path"), py::arg("points"), py::arg("segment_endpoints"),
              py::arg("hole_markers"), py::arg("region_constr"),
@@ -252,7 +294,6 @@ PYBIND11_MODULE(triangle_ppy, m) {
              py::arg("lhs"), py::arg("rhs"))
         ;
 
-
     // Iterate over faces (i.e. oriented triangles)
     py::class_<FaceIterator>(m, "FaceIterator")
         .def(py::init<>())
@@ -263,6 +304,33 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("__iter__", [](FacesList &self) {
             return py::make_iterator(self.begin(), self.end());
         }, py::keep_alive<0, 1>())
+
+        .def("__getitem__", [](FacesList &self, size_t index) -> FaceIterator::Face {
+            auto iter = self.begin();
+
+            //std::advance(iter, index); --> not yet working, OPEN TODO:: !!!!
+            //  -- OPEN TODO::: add direct indexing in Triangle++ ????
+            for(size_t i = 0; i < index; ++i)
+                iter = iter++;
+
+            if(iter == self.end())
+                throw std::out_of_range("Index out of range");
+
+            return *iter;
+        })
+
+        .def("__len__", [](FacesList &self) -> size_t {
+            //return self.m_delaunay->triangleCount();
+            //return static_cast<size_t>(std::distance(self.begin(), self.end()));
+
+            // OPEN TODO::: !!!
+            throw std::runtime_error("Not implemented");
+            return 0;
+        })
+
+        .def("as_iterator", [](FacesList &self) -> FaceIterator {
+            return self.begin();
+        })        
         ;
 
     py::class_<FaceIterator::Face>(m, "Face")
@@ -328,11 +396,11 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("is_ghost",
              [](FaceIterator::Face& f) -> bool {
                 // OPEN TODO::: !!!  ----
+
                 //return f.m_iter->isGhost();
                 return false; 
              })   
         ;
-
 
     // Iterate over triangle vertices        
     py::class_<VertexList>(m, "VertexList")
@@ -353,7 +421,6 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("vertex_id", &VertexIterator::vertexId)
         ;
 
-
     // Iterate over Voronoi vertices        
     py::class_<VoronoiVertexList>(m, "VoronoiVertexList")
         .def(py::init<Delaunay*>())
@@ -364,13 +431,11 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
     py::class_<VoronoiVertexIterator>(m, "VoronoiVertexIterator")
         .def(py::init<>())  
-
         .def("point",
              [](VoronoiVertexIterator& v) -> py::list{ 
                 return point_to_list(*v);
              })
         ;
-
 
     // Iterate over Voronoi edges
     py::class_<VoronoiEdgeList>(m, "VoronoiEdgeList")
@@ -406,9 +471,16 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
 
     // OPEN TODO::: ----
+
     py::class_<TriangulationMesh>(m, "TriangulationMesh")
         .def(py::init<Delaunay*>())
-        // Add methods as needed
+        .def("opposite", 
+             [](TriangulationMesh& mesh, FaceIterator& f) -> FaceIterator { 
+                return mesh.Sym(f);
+             }, 
+             py::arg("face"))
+        
+            // Add methods as needed
         ;
 
 }

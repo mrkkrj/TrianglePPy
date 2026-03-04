@@ -11,9 +11,33 @@ d = Delaunay(points, enable_mesh_indexing=True)
 # Set constraints
 d.set_quality_constraints(min_angle=20.0, max_area=0.1)
 
+ok = d.check_constraints()
+if not ok:
+    print(f"Error - triangulation not guaranteed to succeed with given constraints!")
+elif output_level != DebugOutputLevel.Nothing:
+    print(f"Quality constraints OK, triangulation guaranteed to succeed")
+    
+if not ok:
+    ok = d.check_constraints_relaxed()
+    if ok:
+        if output_level != DebugOutputLevel.Nothing:
+            print(f"Triangulation highly probable to succeed with given constraints")
+    else:
+        print(f"Error - triangulation not even higly probable to succeed with given constraints!")     
+
+# or check it yourself:
+guaranteed_angle, probable_angle = d.get_min_angle_boundaries()
+if output_level != DebugOutputLevel.Nothing:
+    print(f"Min. angles - guarateed={guaranteed_angle:.2f}°, probable={probable_angle:.2f}°")
+
+# segment constr
 d.set_segment_constraint([[0.0, 0.1], [1.0, 1.0]])
-# same as this:
+
+# same as this!
 #d.set_segment_constraint(segment_point_indexes = [2, 3])
+
+print(f" >> Constraints set OK ... \n")  
+
 
 # Perform triangulation
 d.triangulate(quality=True, trace_level=output_level)
@@ -28,6 +52,11 @@ if output_level != DebugOutputLevel.Nothing:
     print(f"Edge count: {edge_count}")
     print(f"Vertice count: {vertice_count}")
     # etc ...
+
+min_point, max_point = d.get_min_max_points()
+
+if output_level != DebugOutputLevel.Nothing:
+    print(f"Triangulation's min point: {min_point}, max point: {max_point}")
 
 print(f" >> Triangulation OK ... \n")    
 
@@ -76,6 +105,14 @@ for v in vertices:
     if output_level != DebugOutputLevel.Nothing:
         print(f"vertexID: {v_id} - at {pt}") 
 
+# Iterate over mesh: WIP!!!
+#   - OPEN TODO:: choose an appropriate abstraction!
+mesh = d.mesh()
+
+opp_face = mesh.opposite(faces.as_iterator()) # OPEN TODO:: --> WIP !!!!
+if output_level != DebugOutputLevel.Nothing:
+    print(f"Opposite triangles (aka faces): {faces[0]} and {opp_face}") 
+
 print(f" >> Iteration OK ... \n")
 
 
@@ -89,7 +126,7 @@ if(d.read_points("./triangulation_result.node", points)):
         print(f"Points from file count: {len(points)}")
         print(f"Points from file: {points}") 
 else:
-    print(f"Cannot read points from file: {points}") 
+    print(f"Error - cannot read points from file: {points}") 
 
 print(f" >> File I/O OK ... \n")
 
