@@ -25,6 +25,15 @@ Use it like this in your Python code:
     d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)
 
     print(f"Triangle count: {d.triangle_count()}")
+    
+    faces = d.faces() # faces are oriented triangles!
+
+    for f in faces:
+        point1 = f.org()
+        point2 = f.dest()
+        point3 = f.apex()
+
+        print(f"Triangle: {point1}/{point2}/{point3}")  
 
 For more usage cases have a look into the *usage_example.py* file.
 
