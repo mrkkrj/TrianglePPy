@@ -257,20 +257,23 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
         // File I/O API
         .def("save_points", &Delaunay::savePoints, py::arg("file_path"))
+
+        // use exc !!!
         .def("save_segments", &Delaunay::saveSegments, py::arg("file_path"))
-        .def("write_off", &Delaunay::writeoff, py::arg("fname"))
+        
+        .def("write_off", &Delaunay::writeoff, py::arg("file_path"))
 
         .def("read_points",
-             [](Delaunay& d, const std::string& filePath, py::list& points) -> bool { 
+             [](Delaunay& d, const std::string& filePath, py::list& points) { 
                 std::vector<reviver::dpoint<double, 2>> vec;
                 if(d.readPoints(filePath, vec)) {
                     //points = points_to_list(vec); --> not working !!!                    
                     auto tmp = points_to_list(vec);
                     for(auto& point: tmp)
                         points.append(point);                    
-                    return true;
+                    return;
                 }
-                return false;
+                throw std::runtime_error("Reading points failed");
              },
              py::arg("file_path"), py::arg("points"))
 
@@ -341,6 +344,12 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 int idx = f.Org(&point);
                 return py::make_tuple(point_to_list(point), idx);
              })
+        .def("org_pt",
+             [](FaceIterator::Face& f) -> py::list { 
+                Delaunay::Point point;
+                int idx = f.Org(&point);
+                return point_to_list(point);
+             })               
         .def("org_idx",
              [](FaceIterator::Face& f) -> int { 
                 int idx = f.Org();
@@ -352,13 +361,20 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 int meshIdx;
                 f.Org(point, meshIdx);
                 return meshIdx;
-             })                     
+             })         
+             
         .def("dest",
              [](FaceIterator::Face& f) -> py::tuple{ 
                 Delaunay::Point point;
                 int idx = f.Dest(&point);
                 return py::make_tuple(point_to_list(point), idx);
-             })             
+             })
+        .def("dest_pt",
+             [](FaceIterator::Face& f) -> py::list { 
+                Delaunay::Point point;
+                int idx = f.Dest(&point);
+                return point_to_list(point);
+             })               
         .def("dest_idx",
              [](FaceIterator::Face& f) -> int { 
                 int idx = f.Dest();
@@ -370,12 +386,19 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 int meshIdx;
                 f.Dest(point, meshIdx);
                 return meshIdx;
-             })                
+             })
+
         .def("apex",
              [](FaceIterator::Face& f) -> py::tuple{ 
                 Delaunay::Point point;
                 int idx = f.Apex(&point);
                 return py::make_tuple(point_to_list(point), idx);
+             })
+        .def("apex_pt",
+             [](FaceIterator::Face& f) -> py::list { 
+                Delaunay::Point point;
+                int idx = f.Apex(&point);
+                return point_to_list(point);
              })
         .def("apex_idx",
              [](FaceIterator::Face& f) -> int { 
@@ -388,7 +411,8 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 int meshIdx;
                 f.Apex(point, meshIdx);
                 return meshIdx;
-             })                
+             })
+             
         .def("area",
             py::overload_cast<>(&FaceIterator::Face::area, py::const_))
 
@@ -431,10 +455,9 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
     py::class_<VoronoiVertexIterator>(m, "VoronoiVertexIterator")
         .def(py::init<>())  
-        .def("point",
-             [](VoronoiVertexIterator& v) -> py::list{ 
-                return point_to_list(*v);
-             })
+        .def("point", [](VoronoiVertexIterator& v) -> py::list{ 
+            return point_to_list(*v);
+        })
         ;
 
     // Iterate over Voronoi edges

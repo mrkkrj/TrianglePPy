@@ -25,17 +25,17 @@ Use it like this in your Python code:
     d.triangulate(quality=True, trace_level=DebugOutputLevel.Info)
 
     print(f"Triangle count: {d.triangle_count()}")
-    
+
     faces = d.faces() # faces are oriented triangles!
 
-    for f in faces:
-        point1 = f.org()
-        point2 = f.dest()
-        point3 = f.apex()
+    for idx, f in enumerate(faces):
+        point1 = f.org_pt()
+        point2 = f.dest_pt()
+        point3 = f.apex_pt()
 
-        print(f"Triangle: {point1}/{point2}/{point3}")  
+        print(f"Triangle {idx}: {point1} -> {point2} -> {point3}")  
 
-For more usage cases have a look into the *usage_example.py* file.
+For more usage cases have a look at the files in the *examples* directory.
 
 ## Caution
 
@@ -44,3 +44,10 @@ For more usage cases have a look into the *usage_example.py* file.
  - only tested on Windows with Python 3.12 for now !!!
 
  - WIP !!!
+
+## Todos
+
+ - move added C++ functionality to the base Triangle++ code
+
+ - and with that: make TrianglePP's iterators std::iterator-compatible!
+ 
