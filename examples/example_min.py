@@ -17,8 +17,9 @@ for idx, f in enumerate(faces):
     point3 = f.apex_pt()
 
     print(f"Triangle {idx}: {point1} -> {point2} -> {point3}")
-  
-if(d.save_points("./min_trg_points.node")): # OPEN TODO:: use exceptions!
-    print(f"Resulting points saved to file!") 
-else:
+
+try:  
+    d.save_points("./min_trg_points.node")
+    print(f"Resulting points saved to file") 
+except:
     print(f"Error - cannot save points to file!") 

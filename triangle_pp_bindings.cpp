@@ -256,21 +256,33 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
 
         // File I/O API
-        .def("save_points", &Delaunay::savePoints, py::arg("file_path"))
+        .def("save_points", 
+            [](Delaunay& d, const std::string& filePath) { 
+                if(d.savePoints(filePath)) {
+                    return;
+                }
+                throw std::runtime_error("Writing points failed");
+             },            
+            py::arg("file_path"))
 
-        // use exc !!!
-        .def("save_segments", &Delaunay::saveSegments, py::arg("file_path"))
+        .def("save_segments", 
+            [](Delaunay& d, const std::string& filePath) { 
+                if(d.saveSegments(filePath)) {
+                    return;
+                }
+                throw std::runtime_error("Writing segments failed");
+             },
+            py::arg("file_path"))
         
-        .def("write_off", &Delaunay::writeoff, py::arg("file_path"))
+        .def("write_off", &Delaunay::writeoff, py::arg("file_path")) // throws
 
         .def("read_points",
              [](Delaunay& d, const std::string& filePath, py::list& points) { 
                 std::vector<reviver::dpoint<double, 2>> vec;
                 if(d.readPoints(filePath, vec)) {
-                    //points = points_to_list(vec); --> not working !!!                    
-                    auto tmp = points_to_list(vec);
-                    for(auto& point: tmp)
-                        points.append(point);                    
+                    //points = points_to_list(vec); --> not working !!!
+                    for(auto& point: vec)
+                        points.append(point_to_list(point));
                     return;
                 }
                 throw std::runtime_error("Reading points failed");
@@ -280,10 +292,40 @@ PYBIND11_MODULE(triangle_ppy, m) {
 
         // OPEN TODO::: ----
 
-        .def("read_segments", &Delaunay::readSegments,
+        .def("read_segments", 
+             [](Delaunay& d, const std::string& filePath,
+                py::list& points, py::list& segmentEndpoints, 
+                py::list& holeMarkers, py::list& regionConstr, 
+                DebugOutputLevel traceLvl) -> int
+             {
+                std::vector<Delaunay::Point> pointsVec;
+                std::vector<int> segmentEndpointsVec;
+                std::vector<Delaunay::Point> holeMarkersVec;
+                std::vector<Delaunay::Point4> regionConstrVec;
+                int duplicatePointCount;
+
+                if(d.readSegments(filePath, pointsVec, segmentEndpointsVec, holeMarkersVec, 
+                                  regionConstrVec, &duplicatePointCount, traceLvl)) {
+                    //points = points_to_list(pointsVec); --> not working !!!                       
+                    for(auto& point: pointsVec)
+                        points.append(point_to_list(point));
+
+                    for(auto& point: segmentEndpointsVec)
+                        segmentEndpoints.append(point);
+                    for(auto& point: holeMarkersVec)
+                        holeMarkers.append(point_to_list(point));                    
+                    for(auto& point: regionConstrVec)
+                        regionConstr.append(
+                            py::make_tuple(point[0], point[1], point[2]) // only 3 points!
+                        );                    
+                    return duplicatePointCount;
+                } else {
+                    throw std::runtime_error("Reading points failed");
+                }
+             },            
+
              py::arg("file_path"), py::arg("points"), py::arg("segment_endpoints"),
              py::arg("hole_markers"), py::arg("region_constr"),
-             py::arg("duplicate_point_count") = nullptr,
              py::arg("trace_level") = DebugOutputLevel::None)
              
         .def("enable_file_io_trace", &Delaunay::enableFileIOTrace, py::arg("enable"))

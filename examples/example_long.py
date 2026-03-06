@@ -132,10 +132,11 @@ except:
 #  --> add impl. in Triangle++ ???
 
 # Write current points to file
-if(d.save_points("./triangulation_points.node")): # OPEN TODO:: use exceptions!
+try:
+    d.save_points("./triangulation_points.node")
     if output_level != DebugOutputLevel.Nothing:
         print(f"Points saved to a .node file") 
-else:
+except:
     print(f"Error - cannot save points to file!") 
 
 # Read from file
@@ -149,16 +150,15 @@ except:
     print(f"Error - cannot read points from file!") 
 
 # Write another one
-if(d.save_segments("./triangulation_segments.poly")): # OPEN TODO:: use exceptions!
+try:
+    d.save_segments("./triangulation_segments.poly")
     if output_level != DebugOutputLevel.Nothing:
         print(f"Points & segments saved to a .poly file") 
-else:
+except:
     print(f"Error - cannot save points & segments to file!") 
 
 # Read from another one
-#  --> OPEN TODO:: WIP!!
-print(f"Warning - cannot read points & segments from file --> NYI !!!") 
-
+#  --> too long, see read_write_segments.py example file!
 
 print(f" >> File I/O OK ... \n")
 
