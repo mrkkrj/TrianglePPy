@@ -23,3 +23,5 @@ try:
     print(f"Resulting points saved to file") 
 except:
     print(f"Error - cannot save points to file!") 
+
+print(f"Finished ---> \n")

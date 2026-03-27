@@ -94,7 +94,8 @@ for f in faces:
         print(f"Triangle by pts: {point1}/{point2}/{point3} - area: {f.area()}")  
         print(f"Triangle by idx: {[p1_x, p1_y]}/{[p2_x, p2_y]}/{[p3_x, p3_y]}")
         print(f" -- Origin point: index in input={orig_index}, index in mesh={orig_mesh_index}")            
-    
+
+
 # Iterate over vertices
 vertices = d.vertices()
 for v in vertices:
@@ -105,6 +106,7 @@ for v in vertices:
 
     if output_level != DebugOutputLevel.Nothing:
         print(f"vertexID: {v_id} - at {pt}") 
+
 
 # Iterate over mesh: WIP!!!
 
@@ -120,18 +122,7 @@ if output_level != DebugOutputLevel.Nothing:
 print(f" >> Iteration OK ... \n")
 
 
-# Write triangulation result to file (OFF format)
-try:
-    d.write_off("./triangulation.off")
-    if output_level != DebugOutputLevel.Nothing:
-        print(f"Triangulation results saved to a .off file") 
-except:
-    print(f"Error - cannot save triangulation to file!") 
-
-# OPEN TODO::: read from an .OFF file ???
-#  --> add impl. in Triangle++ ???
-
-# Write current points to file
+# Write to file
 try:
     d.save_points("./triangulation_points.node")
     if output_level != DebugOutputLevel.Nothing:
@@ -159,6 +150,17 @@ except:
 
 # Read from another one
 #  --> too long, see read_write_segments.py example file!
+
+# Write triangulation to file (OFF format)
+try:
+    d.write_off_file("./triangulation.off")
+    if output_level != DebugOutputLevel.Nothing:
+        print(f"Triangulation results saved to a .off file") 
+except:
+    print(f"Error - cannot save triangulation to file!") 
+
+# OPEN TODO::: read from an .off file ???
+#  --> add impl. in Triangle++ ???
 
 print(f" >> File I/O OK ... \n")
 

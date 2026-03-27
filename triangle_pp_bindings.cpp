@@ -52,62 +52,11 @@ reviver::dpoint<double, 4> list_to_point4(const py::list& lst) {
     return reviver::dpoint<double, 4>(arr);
 }
 
-// Helper class for Voronoi vertex iteration
-//   OPEN TODO:: move to Triangle++ !!!
-struct TRPP_LIB_EXPORT VoronoiVertexList
-{
-    VoronoiVertexList(Delaunay* triangulator) : m_delaunay(triangulator) {}
 
-    struct VertexListIterator : public VoronoiVertexIterator
-    {
-        VertexListIterator(VoronoiVertexIterator vit) : VoronoiVertexIterator(vit) {}
-
-        VertexListIterator operator++() {
-        return VoronoiVertexIterator::operator++();
-        }
-
-        const VoronoiVertexIterator& operator*() const {
-        return *this;
-        }         
-    };
-
-    VertexListIterator begin() { return m_delaunay->vvbegin(); }
-    VertexListIterator end() { return m_delaunay->vvend(); }
-
-private:
-    Delaunay* m_delaunay;
-};
-
-// Helper class for Voronoi edge iteration
-//   OPEN TODO:: move to Triangle++ !!!
-struct TRPP_LIB_EXPORT VoronoiEdgeList
-{
-    VoronoiEdgeList(Delaunay* triangulator) : m_delaunay(triangulator) {}
-
-    struct VertexListIterator : public VoronoiEdgeIterator
-    {
-        VertexListIterator(VoronoiEdgeIterator vit) : VoronoiEdgeIterator(vit) {}
-
-        VertexListIterator operator++() {
-            return VoronoiEdgeIterator::operator++();
-        }
-
-        const VoronoiEdgeIterator& operator*() const {
-            return *this;
-        }         
-    };
-
-    VertexListIterator begin() { return m_delaunay->vebegin(); }
-    VertexListIterator end() { return m_delaunay->veend(); }
-
-private:
-    Delaunay* m_delaunay;
-};
-
-
-// Helper for iterators - move to Triangle++ !!!!
+#if 0
+// Helper for iterators - move to Triangle++ 
 //  --> not working! 
-//  OPEN TODO::: modernize ietartors in Triangle++!
+//  OPEN TODO::: modernize iterators in Triangle++ !!!!
 namespace std {
 template<>
 struct iterator_traits<FaceIterator> {
@@ -118,9 +67,19 @@ struct iterator_traits<FaceIterator> {
     using iterator_category = std::random_access_iterator_tag;
 };
 }
+#endif
+
+// debug support
+static bool debugTrace = false;
+
+void enableDebugTrace(bool enable) {
+    debugTrace = enable;
+}
 
 
 PYBIND11_MODULE(triangle_ppy, m) {
+
+    m.def("enable_debug_trace", &enableDebugTrace, "Enable debug output to stdout");
 
     // Bind enums
     py::enum_<DebugOutputLevel>(m, "DebugOutputLevel")
@@ -274,7 +233,7 @@ PYBIND11_MODULE(triangle_ppy, m) {
              },
             py::arg("file_path"))
         
-        .def("write_off", &Delaunay::writeoff, py::arg("file_path")) // throws
+        .def("write_off_file", &Delaunay::writeoff, py::arg("file_path")) // throws!
 
         .def("read_points",
              [](Delaunay& d, const std::string& filePath, py::list& points) { 
@@ -288,9 +247,6 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 throw std::runtime_error("Reading points failed");
              },
              py::arg("file_path"), py::arg("points"))
-
-
-        // OPEN TODO::: ----
 
         .def("read_segments", 
              [](Delaunay& d, const std::string& filePath,
@@ -322,15 +278,16 @@ PYBIND11_MODULE(triangle_ppy, m) {
                 } else {
                     throw std::runtime_error("Reading points failed");
                 }
-             },            
-
+             },
              py::arg("file_path"), py::arg("points"), py::arg("segment_endpoints"),
              py::arg("hole_markers"), py::arg("region_constr"),
              py::arg("trace_level") = DebugOutputLevel::None)
              
+        // OPEN TODO::: test !
         .def("enable_file_io_trace", &Delaunay::enableFileIOTrace, py::arg("enable"))
         ;
 
+    // OPEN TODO::: needed ??? --> test !?
 
     // Bind OrderPoints struct
     py::class_<Delaunay::OrderPoints>(m, "OrderPoints")
@@ -339,6 +296,7 @@ PYBIND11_MODULE(triangle_ppy, m) {
              py::arg("lhs"), py::arg("rhs"))
         ;
 
+        
     // Iterate over faces (i.e. oriented triangles)
     py::class_<FaceIterator>(m, "FaceIterator")
         .def(py::init<>())
@@ -353,24 +311,41 @@ PYBIND11_MODULE(triangle_ppy, m) {
         .def("__getitem__", [](FacesList &self, size_t index) -> FaceIterator::Face {
             auto iter = self.begin();
 
+            if(debugTrace) 
+                printf("+++ [index] = %d \n", index);
+
             //std::advance(iter, index); --> not yet working, OPEN TODO:: !!!!
             //  -- OPEN TODO::: add direct indexing in Triangle++ ????
-            for(size_t i = 0; i < index; ++i)
+            for(size_t i = 0; i < index; ++i) {
+                // TEST:::
+                if(debugTrace) 
+                    printf("+++ iter step\n");
                 iter = iter++;
+            }
 
             if(iter == self.end())
                 throw std::out_of_range("Index out of range");
 
+            // TEST:::
+            FaceIterator::Face f = *iter;
+            if(debugTrace)
+                printf("+++ face found, area=%f\n\n", f.area());
+
             return *iter;
-        })
+        }, py::keep_alive<1, 0>())  // doesn't work!!!
+        //}, py::keep_alive<0, 1>())  // doesn't work!!!
+        //}, py::keep_alive<1, 1>())  // doesn't work either!!!
 
         .def("__len__", [](FacesList &self) -> size_t {
-            //return self.m_delaunay->triangleCount();
-            //return static_cast<size_t>(std::distance(self.begin(), self.end()));
+            size_t ct = 0;
 
-            // OPEN TODO::: !!!
-            throw std::runtime_error("Not implemented");
-            return 0;
+            //return static_cast<size_t>(std::distance(self.begin(), self.end())); --> also not working
+            //  -- OPEN TODO::: add direct indexing in Triangle++ ????
+            //return self.m_delaunay->triangleCount();            
+            for(auto iter = self.begin(); iter != self.end(); ++iter) {
+                ++ct;
+            }
+            return ct;
         })
 
         .def("as_iterator", [](FacesList &self) -> FaceIterator {
