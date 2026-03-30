@@ -19,7 +19,7 @@ for idx, f in enumerate(faces):
     print(f"Triangle {idx}: {point1} -> {point2} -> {point3}")
 
 try:  
-    d.save_points("./min_trg_points.node")
+    d.save_points("./min_triangltn_points.node")
     print(f"Resulting points saved to file") 
 except:
     print(f"Error - cannot save points to file!") 
