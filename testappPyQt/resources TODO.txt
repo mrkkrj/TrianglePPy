@@ -1,0 +1,5 @@
+
+Put your .qrc through pyside6-rcc and import the generated Python module.
+
+
+pyside6-rcc TrianglePPDemoApp.qrc > TrianglePPDemoApp_rc.py
