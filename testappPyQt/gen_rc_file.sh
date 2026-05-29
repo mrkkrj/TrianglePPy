@@ -1,0 +1,1 @@
+pyside6-rcc TrianglePPDemoApp.qrc > TrianglePPDemoApp_rc.py
