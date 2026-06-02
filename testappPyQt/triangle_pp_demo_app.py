@@ -5,10 +5,10 @@ import random
 import sys
 
 try:
-    import triangle_ppy as tpp  # Your Triangle++ Python binding
+    import triangle_ppy as tpp  # official Triangle++ Python binding
 except ImportError:
     tpp = None
-    print("Warning: tpp module not available. Triangulation disabled.")
+    print("Warning: triangle_ppy module not available. Triangulation disabled.")
 
 from drawing_area import DrawingArea
 from ui_triangle_pp_demo_app import Ui_TrianglePPDemoAppClass
@@ -125,9 +125,9 @@ class TrianglePPDemoApp(QMainWindow):
             self._config_delaunay(delaunay)
 
             if self.use_conforming_delaunay:
-                delaunay.TriangulateConf(self.use_quality_constr)
+                delaunay.triangulate_conf(self.use_quality_constr)
             else:
-                delaunay.Triangulate(self.use_quality_constr)
+                delaunay.triangulate(self.use_quality_constr)
 
             self.triangulated = True
             self.tesselated = False
@@ -148,7 +148,7 @@ class TrianglePPDemoApp(QMainWindow):
 
         try:
             delaunay = tpp.Delaunay([(p.x(), p.y()) for p in drawn_points])
-            delaunay.Tesselate(self.use_conforming_delaunay)
+            delaunay.tesselate(self.use_conforming_delaunay)
             self.tesselated = True
             self._draw_voronoi_tesselation(delaunay)
         except Exception as e:
@@ -241,24 +241,24 @@ class TrianglePPDemoApp(QMainWindow):
         """Configure constraints"""
         if self.use_quality_constr:
             if self.min_angle > 0:
-                delaunay.setMinAngle(self.min_angle)
+                delaunay.set_min_angle(self.min_angle)
             if self.max_area > 0:
-                delaunay.setMaxArea(self.max_area)
+                delaunay.set_max_area(self.max_area)
 
-        delaunay.useConvexHullWithSegments(self.include_convex_hull)
+        delaunay.use_convex_hull_with_segments(self.include_convex_hull)
 
         if self.segment_endpoint_indexes:
-            delaunay.setSegmentConstraint(self.segment_endpoint_indexes)
+            delaunay.set_segment_constraint(self.segment_endpoint_indexes)
 
         if self.hole_points:
             holes = [(p.x(), p.y()) for p in (self.hole_points_orig if self.read_from_file else self.hole_points)]
-            delaunay.setHolesConstraint(holes)
+            delaunay.set_holes_constraint(holes)
 
     def _get_result_point(self, delaunay, idx):
         """Helper for Steiner points"""
         if idx == -1:  # Steiner point
             return QPointF(0, 0)  # Replace with actual logic from your binding
-        x, y = delaunay.pointAtVertexId(idx)
+        x, y = delaunay.point_at_vertex_id(idx)
         return QPointF(x, y)
 
     # ====================== Event Handlers ======================

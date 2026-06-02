@@ -99,6 +99,7 @@ class DrawingArea(QWidget):
         if font:
             painter.setFont(font)
         painter.drawText(pos, text)
+        painter.end()
         self.update()
         self.img_dirty = True
 
@@ -255,6 +256,7 @@ class DrawingArea(QWidget):
         resized.fill(Qt.GlobalColor.white)
         painter = QPainter(resized)
         painter.drawImage(QPointF(0, 0), img)
+        painter.end()
         img.swap(resized)   # modify in place
 
     def _point_clicked(self, click_pos: QPointF, out_index: list) -> bool:
